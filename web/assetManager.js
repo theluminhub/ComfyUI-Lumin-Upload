@@ -770,13 +770,23 @@ async function loadOutputImages() {
         }
 
         if (imageData && imageData.status === 'success') {
+            console.log('[Asset Manager] Received image data:', imageData.count, 'total files');
+
             if (imageData.images && imageData.images.length > 0) {
+                // Log first few images for debugging
+                console.log('[Asset Manager] Sample images:', imageData.images.slice(0, 3));
+
                 const filteredImages = imageData.images.filter(image => {
                     const isUploaded = AssetManagerSystem.state.uploadedAssets.has(image.path);
                     const isHidden = AssetManagerSystem.state.hiddenAssets.has(image.path);
-                    return !isUploaded && !isHidden;
+                    const shouldShow = !isUploaded && !isHidden;
+                    if (!shouldShow) {
+                        console.log('[Asset Manager] Filtering out:', image.path, 'uploaded:', isUploaded, 'hidden:', isHidden);
+                    }
+                    return shouldShow;
                 });
 
+                console.log('[Asset Manager] Filtered to', filteredImages.length, 'files to display');
                 capturedContentArea.innerHTML = '';
 
                 if (filteredImages.length > 0) {
@@ -836,7 +846,40 @@ function createImageCard(imageInfo) {
     };
 
     const fileType = imageInfo.file_type || 'image';
+
+    // Create type badge in top right corner
+    const typeBadge = document.createElement('div');
+    typeBadge.className = 'asset-type-badge';
+    const typeColors = {
+        'image': '#4a90e2',
+        'video': '#e24a4a',
+        'audio': '#9b59b6',
+        'text': '#f39c12',
+        '3D': '#2ecc71'
+    };
+    const typeColor = typeColors[fileType] || '#95a5a6';
+    typeBadge.textContent = fileType.toUpperCase();
+    typeBadge.style.cssText = `
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background-color: ${typeColor};
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: bold;
+        z-index: 10;
+        pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    `;
+
     let previewElement;
+
+    // Debug logging for subfolder paths
+    console.log('[Asset Manager] Creating card for:', imageInfo.name, 'path:', imageInfo.path, 'url:', imageInfo.url, 'type:', fileType);
 
     if (fileType === 'image') {
         previewElement = document.createElement('img');
@@ -849,7 +892,8 @@ function createImageCard(imageInfo) {
             display: block;
         `;
 
-        previewElement.onerror = () => {
+        previewElement.onerror = (e) => {
+            console.error('[Asset Manager] Failed to load image:', imageInfo.name, 'url:', previewElement.src, 'error:', e);
             previewElement.style.backgroundColor = '#d64545';
             previewElement.alt = `Failed to load: ${imageInfo.name}`;
         };
@@ -1049,6 +1093,7 @@ function createImageCard(imageInfo) {
     actionsDiv.appendChild(deleteBtn);
 
     card.appendChild(checkbox);
+    card.appendChild(typeBadge);
     card.appendChild(previewElement);
     card.appendChild(infoDiv);
     card.appendChild(actionsDiv);

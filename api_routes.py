@@ -6,6 +6,7 @@ These routes should be registered with ComfyUI's server
 import os
 import json
 from pathlib import Path
+from urllib.parse import quote
 import folder_paths
 from aiohttp import web
 from .api_client import AssetManagerAPIClient
@@ -34,6 +35,7 @@ def get_output_images():
             ".jpg": "image",
             ".jpeg": "image",
             ".webp": "image",
+            ".svg": "image",
             # videos
             ".mp4": "video",
             ".mov": "video",
@@ -52,30 +54,45 @@ def get_output_images():
             ".glb": "3D",
         }
 
-        supported_formats = list(file_type_map.keys())
-
         file_count = 0
         for root, dirs, files in os.walk(output_dir):
             for file in files:
                 file_count += 1
-                file_lower = file.lower()
 
-                file_ext = None
-                for fmt in supported_formats:
-                    if file_lower.endswith(fmt):
-                        file_ext = fmt
-                        break
+                # Use proper extension extraction instead of endswith matching
+                file_ext = os.path.splitext(file.lower())[1]
 
-                if file_ext:
+                # Check if this extension is supported
+                if file_ext in file_type_map:
                     file_path = os.path.join(root, file)
                     relative_path = os.path.relpath(file_path, output_dir)
+
+                    # Normalize path separators to forward slashes for URLs (works on all OS)
+                    relative_path_normalized = relative_path.replace(os.sep, "/")
+
                     stat_info = os.stat(file_path)
-                    file_type = file_type_map.get(file_ext, "unknown")
+                    file_type = file_type_map[file_ext]
+
+                    # Build URL with subfolder parameter if file is in a subdirectory
+                    # ComfyUI's /view endpoint expects: filename=basename&subfolder=path&type=output
+                    if "/" in relative_path_normalized:
+                        # File is in a subfolder
+                        subfolder = relative_path_normalized.rsplit("/", 1)[0]
+                        basename = relative_path_normalized.rsplit("/", 1)[1]
+                        encoded_basename = quote(basename)
+                        encoded_subfolder = quote(subfolder, safe="/")
+                        view_url = f"/view?filename={encoded_basename}&subfolder={encoded_subfolder}&type=output"
+                    else:
+                        # File is in root output directory
+                        encoded_basename = quote(relative_path_normalized)
+                        view_url = f"/view?filename={encoded_basename}&type=output"
+
+
                     images.append(
                         {
                             "name": file,
-                            "path": relative_path,
-                            "url": f"/view?filename={relative_path}&type=output",
+                            "path": relative_path_normalized,
+                            "url": view_url,
                             "size": stat_info.st_size,
                             "modified": stat_info.st_mtime,
                             "file_type": file_type,
@@ -138,7 +155,9 @@ def upload_assets(data):
         }
 
         for asset_path in assets:
-            full_path = os.path.join(output_dir, asset_path)
+            # Convert forward slashes back to OS-specific separators
+            normalized_asset_path = asset_path.replace("/", os.sep)
+            full_path = os.path.join(output_dir, normalized_asset_path)
 
             if not os.path.exists(full_path):
                 results["failed"] += 1
@@ -194,7 +213,9 @@ def delete_image(image_path):
     """
     try:
         output_dir = folder_paths.get_output_directory()
-        full_path = os.path.join(output_dir, image_path)
+        # Convert forward slashes back to OS-specific separators
+        normalized_image_path = image_path.replace("/", os.sep)
+        full_path = os.path.join(output_dir, normalized_image_path)
 
         real_output_dir = os.path.realpath(output_dir)
         real_file_path = os.path.realpath(full_path)
