@@ -2,6 +2,8 @@
 
 A ComfyUI custom node for managing and uploading generated outputs and node metadata to an external API.
 
+> **Note:** This extension requires an account on [https://luminhub.io/](https://luminhub.io/) where you will need to create your API key.
+
 ## Features
 
 ### Settings Tab
