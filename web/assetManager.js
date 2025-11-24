@@ -13,11 +13,11 @@ const AssetManagerSystem = {
         uploadMode: 'manual',
         selectedProject: '',
         selectedOrganization: '',
-        uploadedAssets: new Set(), 
+        uploadedAssets: new Set(),
         hiddenAssets: new Set(),
-        knownFiles: new Set() 
+        knownFiles: new Set()
     },
-    automaticUploadTimeout: null 
+    automaticUploadTimeout: null
 };
 
 function createAssetManagerModal() {
@@ -92,12 +92,21 @@ function createAssetManagerModal() {
     };
 
     const title = document.createElement('h3');
-    title.textContent = 'Asset Manager';
+    title.textContent = 'Lumin';
     title.style.cssText = `
         margin-top: 0;
         margin-bottom: 15px;
         color: #fff;
     `;
+
+    const subheader = document.createElement('p');
+    subheader.style.cssText = `
+        margin-top: -10px;
+        margin-bottom: 20px;
+        color: #aaa;
+        font-size: 14px;
+    `;
+    subheader.innerHTML = 'Select the assets you want to push to <a href="https://luminhub.io" target="_blank" rel="noopener noreferrer" style="color: #4a9eff; text-decoration: none;">luminhub.io</a>';
 
     const tabContainer = document.createElement('div');
     tabContainer.style.cssText = `
@@ -185,6 +194,7 @@ function createAssetManagerModal() {
     };
 
     modalContent.appendChild(title);
+    modalContent.appendChild(subheader);
     modalContent.appendChild(tabContainer);
     modalContent.appendChild(mainContent);
     modalContent.appendChild(settingsContent);
@@ -1925,8 +1935,8 @@ function initializeAssetManager() {
 
                             return false;
                         },
-                        tooltip: "Asset Manager - Upload generated outputs to API",
-                        content: "Asset Manager",
+                        tooltip: "Upload generated outputs to Lumin",
+                        content: "Lumin",
                     }).element;
 
                     app.menu?.settingsGroup.element.before(assetManagerButton);
